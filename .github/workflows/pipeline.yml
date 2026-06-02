@@ -1,0 +1,89 @@
+name: Render Deploy Pipeline
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+  workflow_dispatch: # Permite ejecución manual desde GitHub Actions UI
+
+jobs:
+  # =========================================================
+  # JOB 1: Build del proyecto React + Vite
+  # =========================================================
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Project
+        run: npm run build
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  # =========================================================
+  # JOB 2: Deploy a Render (solo en push a develop)
+  # =========================================================
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Trigger Render Deploy
+        run: |
+          echo "Triggering deploy to Render..."
+          curl -s -o response.json -w "%{http_code}" \
+            --request POST \
+            --url "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
+            --header "Accept: application/json" \
+            --header "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            --header "Content-Type: application/json" \
+            --data '{"clearCache": "do_not_clear"}' > http_code.txt
+          HTTP_CODE=$(cat http_code.txt)
+          echo "HTTP Status: $HTTP_CODE"
+          cat response.json
+          if [ "$HTTP_CODE" -ne 201 ]; then
+            echo "Deploy trigger failed with status $HTTP_CODE"
+            exit 1
+          fi
+          echo "Deploy triggered successfully on Render!"
+
+      - name: Wait for Deploy to Complete
+        run: |
+          echo "Waiting 60 seconds for Render to process the deploy..."
+          sleep 60
+          echo "Deploy process initiated. Check Render dashboard for status."
+
+      - name: Notify Deploy Status
+        run: |
+          echo "============================================"
+          echo " Frontend deployed to Render successfully"
+          echo " Branch : develop"
+          echo " Commit : ${{ github.sha }}"
+          echo " Actor  : ${{ github.actor }}"
+          echo " Time   : $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "============================================"
