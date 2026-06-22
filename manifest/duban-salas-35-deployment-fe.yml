@@ -1,0 +1,25 @@
+# kubectl apply -f duban-salas-35-deployment-fe.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: duban-salas-35-deployment-fe
+  namespace: duban-salas-35-namespace-fe
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: duban-salas-35-deployment-fe       # Debe coincidir con las etiquetas del Service
+  template:
+    metadata:
+      labels:
+        app: duban-salas-35-deployment-fe     # Debe coincidir con las etiquetas del Service
+    spec:
+      containers:
+      - name: duban-salas-35-container-fe
+        image: salasnapandubanalexander/as241s5_aej_35-fe:latest  # Imagen Docker Hub
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80                   # nginx expone el puerto 80
+        envFrom:
+        - secretRef:
+            name: duban-salas-35-secret-fe    # Carga las variables de entorno desde el Secret

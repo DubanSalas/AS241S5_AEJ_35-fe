@@ -1,0 +1,5 @@
+# kubectl apply -f duban-salas-35-namespace-fe.yml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: duban-salas-35-namespace-fe

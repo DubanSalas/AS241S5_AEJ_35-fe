@@ -1,0 +1,14 @@
+# kubectl apply -f duban-salas-35-service-fe.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: duban-salas-35-service-fe
+  namespace: duban-salas-35-namespace-fe
+spec:
+  type: NodePort       # Puerto accesible desde fuera del cluster
+  ports:
+  - port: 80           # Puerto del Service
+    targetPort: 80     # Puerto del contenedor (nginx expone el 80)
+    nodePort: 30002    # Puerto en el nodo (30000-32767)
+  selector:
+    app: duban-salas-35-deployment-fe  # Debe coincidir con las etiquetas del Deployment
